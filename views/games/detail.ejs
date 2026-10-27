@@ -163,7 +163,7 @@
 
 <div id="game-detail" class="game-detail" data-game-id="<%= gameId %>">
   <div class="detail-toolbar">
-    <a class="btn btn-sm btn-outline-secondary" href="/">Danh sách game</a>
+    <a id="back-to-list" class="btn btn-sm btn-outline-secondary" href="/">Danh sách game</a>
   </div>
 
   <div id="detail-loading" class="alert alert-info" role="status">Đang tải chi tiết game...</div>
@@ -202,7 +202,7 @@
 
         <div class="detail-actions">
           <a id="edit-game" class="btn btn-primary" href="#">Chỉnh sửa game</a>
-          <a class="btn btn-outline-secondary" href="/">Quay lại danh sách</a>
+          <a id="back-to-list-bottom" class="btn btn-outline-secondary" href="/">Quay lại danh sách</a>
         </div>
       </div>
     </div>
@@ -211,6 +211,7 @@
 
 <script type="module">
   import api from '/js/api-client.js';
+  import { getGamesListUrl } from '/js/list-state.js';
 
   const detail = document.getElementById('game-detail');
   const loading = document.getElementById('detail-loading');
@@ -218,6 +219,9 @@
   const panel = document.getElementById('detail-panel');
   const image = document.getElementById('game-image');
   const coverPlaceholder = document.getElementById('cover-placeholder');
+  const returnUrl = getGamesListUrl();
+  document.getElementById('back-to-list').href = returnUrl;
+  document.getElementById('back-to-list-bottom').href = returnUrl;
 
   try {
     const response = await api.get(`/api/games/${encodeURIComponent(detail.dataset.gameId)}`);

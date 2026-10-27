@@ -33,6 +33,7 @@
 <script type="module">
   import api from '/js/api-client.js';
   import { saveToken } from '/js/auth-token.js';
+  import { goToGamesList } from '/js/list-state.js';
 
   const form = document.getElementById('auth-form');
   const email = document.getElementById('email');
@@ -81,8 +82,7 @@
         password: password.value,
       });
       saveToken(response.data.accessToken);
-      window.showMessage(mode === 'register' ? 'Đăng ký thành công.' : 'Đăng nhập thành công.', 'success');
-      setTimeout(() => window.location.assign('/'), 3000);
+      window.showMessage(mode === 'register' ? 'Đăng ký thành công.' : 'Đăng nhập thành công.', 'success', goToGamesList);
     } catch (error) {
       const message = error.response?.data?.message || error.response?.data?.error || 'Không thể xác thực tài khoản.';
       window.showMessage(typeof message === 'string' ? message : 'Thông tin đăng nhập không hợp lệ.');

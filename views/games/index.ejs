@@ -36,6 +36,7 @@
 </form>
 <script type="module">
   import api from '/js/api-client.js';
+  import { saveGamesListUrl } from '/js/list-state.js';
 
   const tbody = document.getElementById('games-tbody');
   const loadingMessage = document.getElementById('loading-message');
@@ -61,14 +62,20 @@
     paginationOrder.value = orderSelect.value;
   };
 
-  const setPage = (page, replace = false) => {
-    currentPage = page;
-    updatePaginationForm(page);
+  const saveCurrentListUrl = () => {
+    saveGamesListUrl();
+  };
+
+  const getListUrl = (page) => {
     const params = new URLSearchParams();
     if (search.value.trim()) params.set('search', search.value.trim());
     params.set('order', orderSelect.value);
     params.set('page', String(page));
-    window.history[replace ? 'replaceState' : 'pushState']({}, '', `/?${params}`);
+    return `/?${params}`;
+  };
+
+  const goToPage = (page) => {
+    window.location.assign(getListUrl(page));
   };
 
   const loadFromUrl = () => {
@@ -78,6 +85,7 @@
     const page = Number.parseInt(params.get('page'), 10);
     currentPage = Number.isInteger(page) && page > 0 ? page : 1;
     updatePaginationForm(currentPage);
+    saveCurrentListUrl();
   };
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
@@ -99,8 +107,8 @@
       const { games, total, page, totalPages } = res.data;
 
       if (page > Math.max(totalPages, 1)) {
-        setPage(Math.max(totalPages, 1), true);
-        return loadGames();
+        window.location.replace(getListUrl(Math.max(totalPages, 1)));
+        return;
       }
 
       if (games.length === 0) {
@@ -156,16 +164,25 @@
 
   filterForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    setPage(1);
-    loadGames();
+    goToPage(1);
+  });
+
+  pagination.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const requestedPage = Number.parseInt(pageNumber.value, 10);
+    const maxPage = Math.max(1, Number(pageNumber.max));
+    const targetPage = Number.isInteger(requestedPage)
+      ? Math.min(Math.max(requestedPage, 1), maxPage)
+      : currentPage;
+    goToPage(targetPage);
   });
 
   previousPage.addEventListener('click', () => {
-    pageNumber.value = String(Math.max(1, Number(pageNumber.value || currentPage) - 1));
+    goToPage(Math.max(1, Number(pageNumber.value || currentPage) - 1));
   });
 
   nextPage.addEventListener('click', () => {
-    pageNumber.value = String(Math.min(Number(pageNumber.max), Number(pageNumber.value || currentPage) + 1));
+    goToPage(Math.min(Number(pageNumber.max), Number(pageNumber.value || currentPage) + 1));
   });
 
   tbody.addEventListener('click', (event) => {
@@ -173,12 +190,6 @@
     if (button) deleteGame(button.dataset.gameId);
   });
 
-  window.addEventListener('popstate', () => {
-    loadFromUrl();
-    loadGames();
-  });
-
   loadFromUrl();
-  if (!window.location.search) setPage(currentPage, true);
   loadGames();
 </script>

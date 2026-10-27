@@ -59,7 +59,10 @@
 <section class="container mt-3" aria-labelledby="chat-title">
     <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
         <h1 id="chat-title" class="h4 mb-0"><%= title || 'Trợ lý AI' %></h1>
-        <button id="clear-chat" class="btn btn-sm btn-outline-secondary" type="button">Xóa hội thoại</button>
+        <div class="d-flex gap-2">
+            <a id="back-to-list" class="btn btn-sm btn-outline-secondary" href="/">Quay lại danh sách</a>
+            <button id="clear-chat" class="btn btn-sm btn-outline-secondary" type="button">Xóa hội thoại</button>
+        </div>
     </div>
     <div class="chat-panel">
         <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
@@ -78,6 +81,9 @@
 <script type="module">
     import api from '/js/api-client.js';
     import { getToken } from '/js/auth-token.js';
+    import { getGamesListUrl } from '/js/list-state.js';
+
+    document.getElementById('back-to-list').href = getGamesListUrl();
 
     const form = document.getElementById('chat-form');
     const commandInput = document.getElementById('command');

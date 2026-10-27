@@ -25,7 +25,7 @@
       "id": 6
     },
     {
-      "title": "cs 16",
+      "title": "cs 167",
       "price": 10000,
       "platform": "PC",
       "category": "Sinh tồn",
@@ -34,11 +34,19 @@
     },
     {
       "id": 8,
-      "title": "Trình Hà Lân",
+      "title": "Trần Hà Linh",
       "price": 0,
       "platform": "Viet69",
       "category": "Mô phỏng",
       "imageUrl": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGvXD9onaLnIv97K-kvi-jHKyAyPH2YdoE3u2ITAEyaQ&s=10"
+    },
+    {
+      "id": 9,
+      "title": "gfdghf",
+      "price": 56464,
+      "platform": "ygjhg",
+      "category": "Thể thao",
+      "imageUrl": null
     }
   ],
   "categories": [

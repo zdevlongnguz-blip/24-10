@@ -3,7 +3,7 @@
     <h1 class="h3 mb-0">
       <%= game ? 'Chỉnh sửa game' : 'Thêm game mới' %>
     </h1>
-    <a href="/" class="btn btn-sm btn-outline-secondary">Quay lại</a>
+    <a id="back-to-list" href="/" class="btn btn-sm btn-outline-secondary">Quay lại</a>
   </div>
 
   <form id="game-form" data-game-id="<%= game ? game.id : null %>">
@@ -55,6 +55,9 @@
 
 <script type="module">
   import api from '/js/api-client.js';
+  import { getGamesListUrl, goToGamesList } from '/js/list-state.js';
+
+  document.getElementById('back-to-list').href = getGamesListUrl();
 
   const id = document.getElementById('id');
   const title = document.getElementById('title');
@@ -122,7 +125,7 @@
 
     try {
       const res = id.value.trim() ? await api.patch(`/api/games/${game.id}`, game) : await api.post('/api/games', game);
-      window.showMessage(res.data.message, 'success', () => window.location.assign('/'));
+      window.showMessage(res.data.message, 'success', goToGamesList);
     } catch (error) {
       window.showMessage('Có lỗi xảy ra khi thao tác: ' + (error.response?.data?.error || error.message), 'danger');
       saveButton.disabled = false;
