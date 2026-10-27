@@ -1,0 +1,262 @@
+<style>
+  .game-detail {
+    --detail-ink: #1c2733;
+    --detail-muted: #687684;
+    --detail-accent: #d84c32;
+    color: var(--detail-ink);
+  }
+
+  .detail-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .detail-panel {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dfe5e9;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(28, 39, 51, 0.08);
+    animation: detail-enter 240ms ease-out both;
+  }
+
+  .detail-layout {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.78fr) minmax(0, 1fr);
+    gap: clamp(1.25rem, 4vw, 2.5rem);
+    padding: clamp(1rem, 4vw, 2rem);
+  }
+
+  .detail-cover {
+    position: relative;
+    overflow: hidden;
+    align-self: start;
+    aspect-ratio: 3 / 4;
+    background: #e8f0ed;
+    border-radius: 6px;
+  }
+
+  .detail-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .detail-cover-placeholder {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: #29544c;
+    text-align: center;
+    background: repeating-linear-gradient(135deg, #e8f0ed 0 12px, #dce9e4 12px 24px);
+  }
+
+  .detail-cover-placeholder strong {
+    font-size: 1.15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .detail-cover-placeholder span {
+    color: #56766e;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .detail-copy {
+    min-width: 0;
+    align-self: center;
+  }
+
+  .detail-category {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0.2rem 0.65rem;
+    color: #8f2f20;
+    background: #fff0ec;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .detail-title {
+    margin: 0.8rem 0 0.25rem;
+    font-size: clamp(1.65rem, 5vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .detail-id {
+    color: var(--detail-muted);
+    font-size: 0.9rem;
+  }
+
+  .detail-price {
+    margin: 1.5rem 0;
+    padding: 1rem 0;
+    border-top: 1px solid #e8ecef;
+    border-bottom: 1px solid #e8ecef;
+  }
+
+  .detail-price span,
+  .detail-meta dt {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--detail-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  .detail-price strong {
+    color: var(--detail-accent);
+    font-size: 1.65rem;
+    line-height: 1.2;
+  }
+
+  .detail-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+  }
+
+  .detail-meta dd {
+    margin: 0;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  @keyframes detail-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 540px) {
+    .detail-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .detail-cover {
+      width: min(100%, 280px);
+      margin-inline: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .detail-panel { animation: none; }
+  }
+</style>
+
+<div id="game-detail" class="game-detail" data-game-id="<%= gameId %>">
+  <div class="detail-toolbar">
+    <a class="btn btn-sm btn-outline-secondary" href="/">Danh sách game</a>
+  </div>
+
+  <div id="detail-loading" class="alert alert-info" role="status">Đang tải chi tiết game...</div>
+  <div id="detail-error" class="alert alert-warning" role="alert" hidden></div>
+
+  <section id="detail-panel" class="detail-panel" aria-labelledby="game-title" hidden>
+    <div class="detail-layout">
+      <div class="detail-cover">
+        <img id="game-image" alt="" hidden>
+        <div id="cover-placeholder" class="detail-cover-placeholder">
+          <span>GAME COLLECTION</span>
+          <strong id="cover-title">Game</strong>
+        </div>
+      </div>
+
+      <div class="detail-copy">
+        <span id="game-category" class="detail-category"></span>
+        <h1 id="game-title" class="detail-title"></h1>
+        <p id="game-id" class="detail-id"></p>
+
+        <div class="detail-price">
+          <span>Giá bán</span>
+          <strong id="game-price"></strong>
+        </div>
+
+        <dl class="detail-meta">
+          <div>
+            <dt>Nền tảng</dt>
+            <dd id="game-platform"></dd>
+          </div>
+          <div>
+            <dt>Thể loại</dt>
+            <dd id="game-category-detail"></dd>
+          </div>
+        </dl>
+
+        <div class="detail-actions">
+          <a id="edit-game" class="btn btn-primary" href="#">Chỉnh sửa game</a>
+          <a class="btn btn-outline-secondary" href="/">Quay lại danh sách</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="module">
+  import api from '/js/api-client.js';
+
+  const detail = document.getElementById('game-detail');
+  const loading = document.getElementById('detail-loading');
+  const errorMessage = document.getElementById('detail-error');
+  const panel = document.getElementById('detail-panel');
+  const image = document.getElementById('game-image');
+  const coverPlaceholder = document.getElementById('cover-placeholder');
+
+  try {
+    const response = await api.get(`/api/games/${encodeURIComponent(detail.dataset.gameId)}`);
+    const game = response.data;
+    const category = game.category || 'Chưa phân loại';
+    const price = Number(game.price);
+
+    document.getElementById('game-title').textContent = game.title || 'Game chưa có tên';
+    document.getElementById('cover-title').textContent = game.title || 'Game';
+    document.getElementById('game-category').textContent = category;
+    document.getElementById('game-category-detail').textContent = category;
+    document.getElementById('game-platform').textContent = game.platform || 'Chưa cập nhật';
+    document.getElementById('game-id').textContent = `Mã game #${game.id}`;
+    document.getElementById('game-price').textContent = Number.isFinite(price)
+      ? price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })
+      : 'Chưa cập nhật';
+    document.getElementById('edit-game').href = `/game/${encodeURIComponent(game.id)}/edit`;
+
+    if (game.imageUrl && /^https?:\/\//i.test(game.imageUrl)) {
+      image.src = game.imageUrl;
+      image.alt = `Ảnh bìa ${game.title || 'game'}`;
+      image.addEventListener('load', () => {
+        image.hidden = false;
+        coverPlaceholder.hidden = true;
+      }, { once: true });
+      image.addEventListener('error', () => {
+        image.hidden = true;
+        coverPlaceholder.hidden = false;
+      }, { once: true });
+    }
+
+    loading.hidden = true;
+    panel.hidden = false;
+  } catch (error) {
+    console.error('Error fetching game details:', error);
+    loading.hidden = true;
+    errorMessage.textContent = error.response?.status === 404
+      ? 'Không tìm thấy game này.'
+      : 'Có lỗi xảy ra khi tải chi tiết game.';
+    errorMessage.hidden = false;
+  }
+</script>

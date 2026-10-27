@@ -1,0 +1,135 @@
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="h3 mb-0">
+      <%= game ? 'Chỉnh sửa game' : 'Thêm game mới' %>
+    </h1>
+    <a href="/" class="btn btn-sm btn-outline-secondary">Quay lại</a>
+  </div>
+
+  <form id="game-form" data-game-id="<%= game ? game.id : null %>">
+
+    <input type="hidden" name="id" id="id" value="<%= game ? game.id : '' %>">
+
+    <div class="mb-3">
+      <label for="title" class="form-label">Tên game</label>
+      <input id="title" name="title" value="<%= game ? game.title : '' %>" class="form-control" type="text"
+        maxlength="120">
+      <p class="form-text text-danger" id="title-error"></p>
+    </div>
+
+    <div class="mb-3">
+      <label for="price" class="form-label">Giá (VND)</label>
+      <input id="price" name="price" value="<%= game ? game.price : '' %>" class="form-control" type="number" min="0"
+        step="1">
+      <p class="form-text text-danger" id="price-error"></p>
+    </div>
+
+    <div class="mb-3">
+      <label for="platform" class="form-label">Nền tảng</label>
+      <input id="platform" name="platform" value="<%= game ? game.platform : '' %>" class="form-control" type="text"
+        maxlength="80">
+      <p class="form-text text-danger" id="platform-error"></p>
+    </div>
+
+    <div class="mb-3">
+      <label for="category" class="form-label">Thể loại</label>
+      <select id="category" name="category" class="form-select">
+        <% /* Chọn placeholder khi thêm mới hoặc game chưa có thể loại. */ %>
+        <option value="" disabled <%= !game || !game.category ? 'selected' : '' %>>Chọn thể loại</option>
+        <% categories.forEach(({ name }) => { %>
+          <option value="<%= name %>" <%= game && game.category === name ? 'selected' : '' %>><%= name %></option>
+        <% }) %>
+      </select>
+      <p class="form-text text-danger" id="category-error"></p>
+    </div>
+
+    <div class="mb-4">
+      <label for="imageUrl" class="form-label">URL ảnh bìa (không bắt buộc)</label>
+      <input id="imageUrl" name="imageUrl" value="<%= game ? game.imageUrl : '' %>" class="form-control" type="url"
+        maxlength="2048">
+    </div>
+
+    <button class="btn btn-primary" id="button-save" type="submit">Lưu thay đổi</button>
+  </form>
+</div>
+
+<script type="module">
+  import api from '/js/api-client.js';
+
+  const id = document.getElementById('id');
+  const title = document.getElementById('title');
+  const price = document.getElementById('price');
+  const platform = document.getElementById('platform');
+  const category = document.getElementById('category');
+  const imageUrl = document.getElementById('imageUrl');
+  const form = document.getElementById('game-form');
+  const saveButton = document.getElementById('button-save');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    //validate form data
+    let isValid = true;
+    const titleError = document.getElementById('title-error');
+    const priceError = document.getElementById('price-error');
+    const platformError = document.getElementById('platform-error');
+    const categoryError = document.getElementById('category-error');
+
+    titleError.textContent = '';
+    priceError.textContent = '';
+    platformError.textContent = '';
+    categoryError.textContent = '';
+
+    if (!title.value.trim()) {
+      titleError.textContent = 'Tên game là bắt buộc';
+      isValid = false;
+    }
+
+    if (!price.value || Number(price.value) < 0) {
+      priceError.textContent = 'Giá là bắt buộc và phải lớn hơn hoặc bằng 0';
+      isValid = false;
+    }
+
+    if (!platform.value.trim()) {
+      platformError.textContent = 'Nền tảng là bắt buộc';
+      isValid = false;
+    }
+
+    if (!category.value.trim()) {
+      categoryError.textContent = 'Thể loại là bắt buộc';
+      isValid = false;
+    }
+
+    if (!isValid) {
+      return;
+    }
+
+    if (!confirm('Bạn có chắc chắn muốn lưu thay đổi?')) {
+      return;
+    }
+
+    const game = {
+      id: id.value,
+      title: title.value,
+      price: Number(price.value),
+      platform: platform.value,
+      category: category.value,
+      imageUrl: imageUrl.value || null
+    };
+
+    saveButton.disabled = true;
+    saveButton.textContent = 'Đang lưu...';
+
+    try {
+      const res = id.value.trim() ? await api.patch(`/api/games/${game.id}`, game) : await api.post('/api/games', game);
+      window.showMessage(res.data.message, 'success', () => window.location.assign('/'));
+    } catch (error) {
+      window.showMessage('Có lỗi xảy ra khi thao tác: ' + (error.response?.data?.error || error.message), 'danger');
+      saveButton.disabled = false;
+      saveButton.textContent = 'Lưu thay đổi';
+    }
+  });
+
+
+
+</script>

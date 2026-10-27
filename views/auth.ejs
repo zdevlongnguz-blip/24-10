@@ -1,0 +1,93 @@
+<div class="container mt-4" style="max-width: 480px;">
+  <h1 class="h3 mb-3"><%= mode === 'register' ? 'Tạo tài khoản' : 'Đăng nhập' %></h1>
+  <form id="auth-form" data-mode="<%= mode %>" novalidate>
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input id="email" name="email" class="form-control" type="email" autocomplete="email" required>
+      <div id="email-error" class="invalid-feedback"></div>
+    </div>
+    <div class="mb-3">
+      <label for="password" class="form-label">Mật khẩu</label>
+      <input id="password" name="password" class="form-control" type="password" minlength="6" autocomplete="<%= mode === 'register' ? 'new-password' : 'current-password' %>" required>
+      <div id="password-error" class="invalid-feedback"></div>
+    </div>
+    <% if (mode === 'register') { %>
+      <div class="mb-3">
+        <label for="confirm-password" class="form-label">Nhập lại mật khẩu</label>
+        <input id="confirm-password" class="form-control" type="password" minlength="6" autocomplete="new-password" required>
+        <div id="confirm-password-error" class="invalid-feedback"></div>
+      </div>
+    <% } %>
+    <button class="btn btn-primary" type="submit"><%= mode === 'register' ? 'Đăng ký' : 'Đăng nhập' %></button>
+  </form>
+
+  <p class="mt-3 mb-0">
+    <% if (mode === 'register') { %>
+      Đã có tài khoản? <a href="/login">Đăng nhập</a>
+    <% } else { %>
+      Chưa có tài khoản? <a href="/register">Đăng ký</a>
+    <% } %>
+  </p>
+</div>
+
+<script type="module">
+  import api from '/js/api-client.js';
+  import { saveToken } from '/js/auth-token.js';
+
+  const form = document.getElementById('auth-form');
+  const email = document.getElementById('email');
+  const password = document.getElementById('password');
+  const confirmation = document.getElementById('confirm-password');
+  const submitButton = form.querySelector('[type="submit"]');
+  const mode = form.dataset.mode;
+
+  const validateField = (field) => {
+    const input = field === 'confirm-password' ? confirmation : document.getElementById(field);
+    const errorElement = document.getElementById(`${field}-error`);
+    const value = input.value.trim();
+    let error = '';
+
+    if (field === 'email' && !value) error = 'Vui lòng nhập email.';
+    else if (field === 'email' && input.validity.typeMismatch) error = 'Email không đúng định dạng.';
+    else if (field === 'password' && !input.value) error = 'Vui lòng nhập mật khẩu.';
+    else if (field === 'password' && input.value.length < 6) error = 'Mật khẩu cần ít nhất 6 ký tự.';
+    else if (field === 'confirm-password' && !input.value) error = 'Vui lòng nhập lại mật khẩu.';
+    else if (field === 'confirm-password' && input.value !== password.value) error = 'Mật khẩu nhập lại không khớp.';
+
+    input.classList.toggle('is-invalid', Boolean(error));
+    errorElement.textContent = error;
+    return !error;
+  };
+
+  form.addEventListener('input', (event) => {
+    if (['email', 'password', 'confirm-password'].includes(event.target.id)) {
+      validateField(event.target.id);
+    }
+    if (event.target.id === 'password' && confirmation?.value) {
+      validateField('confirm-password');
+    }
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const fields = confirmation ? ['email', 'password', 'confirm-password'] : ['email', 'password'];
+    if (!fields.map(validateField).every(Boolean)) return;
+
+    submitButton.disabled = true;
+    submitButton.textContent = mode === 'register' ? 'Đang đăng ký...' : 'Đang đăng nhập...';
+    try {
+      const response = await api.post(`/api/auth/${mode}`, {
+        email: email.value.trim(),
+        password: password.value,
+      });
+      saveToken(response.data.accessToken);
+      window.showMessage(mode === 'register' ? 'Đăng ký thành công.' : 'Đăng nhập thành công.', 'success');
+      setTimeout(() => window.location.assign('/'), 3000);
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Không thể xác thực tài khoản.';
+      window.showMessage(typeof message === 'string' ? message : 'Thông tin đăng nhập không hợp lệ.');
+      submitButton.disabled = false;
+      submitButton.textContent = mode === 'register' ? 'Đăng ký' : 'Đăng nhập';
+    }
+  });
+</script>

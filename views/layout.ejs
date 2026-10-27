@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+        <%= title %>
+    </title>
+    <link href="/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .message-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+            background: rgba(18, 24, 32, 0.48);
+            backdrop-filter: blur(7px);
+        }
+
+        .message-overlay[hidden] {
+            display: none;
+        }
+
+        .message-box {
+            --message-accent: #51606f;
+            position: relative;
+            width: min(100%, 460px);
+            display: grid;
+            grid-template-columns: 112px minmax(0, 1fr);
+            align-items: center;
+            gap: 1.25rem;
+            margin: 0;
+            padding: 1.25rem 2.75rem 1.25rem 1.25rem;
+            color: #202832;
+            background: #fff;
+            border: 0;
+            border-top: 4px solid var(--message-accent);
+            border-radius: 12px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
+            animation: message-enter 180ms ease-out both;
+        }
+
+        .message-box[data-type="success"] { --message-accent: #198754; }
+        .message-box[data-type="danger"] { --message-accent: #dc3545; }
+        .message-box[data-type="info"] { --message-accent: #0d6efd; }
+
+        .site-navbar {
+            background: #0d6efd;
+            box-shadow: 0 2px 12px rgba(13, 42, 89, 0.24);
+        }
+
+        .site-navbar .nav-link {
+            color: #fff;
+        }
+
+        .site-navbar #main-navigation[hidden] {
+            display: none !important;
+        }
+
+        .site-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.45rem;
+            color: #b51e35;
+            background: #fff;
+            border-radius: 0.4rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .site-brand:hover {
+            color: #8f1428;
+        }
+
+        .site-brand-number {
+            padding: 0.08rem 0.25rem;
+            color: #fff;
+            background: #c51e3a;
+            border-radius: 0.25rem;
+        }
+
+        .site-navbar .nav-link {
+            border-radius: 0.375rem;
+            padding: 0.45rem 0.75rem;
+            transition: background-color 120ms ease, color 120ms ease;
+        }
+
+        .site-navbar .nav-link:hover {
+            background: rgba(255, 255, 255, 0.16);
+            color: #fff;
+        }
+
+        .site-navbar .nav-link[aria-current="page"] {
+            background: #073b8c;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: inset 0 0 0 2px #fff;
+        }
+
+        .site-navbar a:focus-visible,
+        .site-navbar button:focus-visible {
+            outline: 3px solid #ffe082;
+            outline-offset: 2px;
+            box-shadow: none;
+        }
+
+        .message-gif {
+            display: block;
+            width: 112px;
+            height: 112px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #edf0f2;
+        }
+
+        .message-title {
+            margin: 0 0 0.35rem;
+            color: var(--message-accent);
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .message-text {
+            margin: 0;
+            overflow-wrap: anywhere;
+            color: #45505b;
+        }
+
+        .message-close {
+            position: absolute;
+            top: 0.85rem;
+            right: 0.85rem;
+        }
+
+        @keyframes message-enter {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @media (max-width: 420px) {
+            .message-box {
+                grid-template-columns: 80px minmax(0, 1fr);
+                gap: 0.9rem;
+                padding: 1rem 2.5rem 1rem 1rem;
+            }
+
+            .message-gif {
+                width: 80px;
+                height: 80px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .message-box { animation: none; }
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <nav class="navbar site-navbar navbar-dark sticky-top mb-4">
+        <div class="container">
+            <a class="navbar-brand site-brand" href="/" aria-label="Viet69 - Trang chủ">
+                <span>Viet</span><span class="site-brand-number">69</span>
+            </a>
+            <nav id="main-navigation" class="d-flex align-items-center gap-1 me-auto" aria-label="Điều hướng chính" hidden>
+                <a class="nav-link" href="/" <%- activePage === 'home' ? 'aria-current="page"' : '' %>>Trang chủ</a>
+                <a class="nav-link" href="/ai" <%- activePage === 'assistant' ? 'aria-current="page"' : '' %>>Trợ lý</a>
+                <a class="nav-link" href="/game/new" <%- activePage === 'new' ? 'aria-current="page"' : '' %>>Thêm mới</a>
+            </nav>
+            <div class="d-flex align-items-center gap-2">
+                <a id="login-link" class="btn btn-sm btn-outline-light" href="/login">Đăng nhập</a>
+                <button id="logout-button" class="btn btn-sm btn-outline-light" type="button" hidden>Đăng xuất</button>
+            </div>
+        </div>
+    </nav>
+
+
+
+    <main id="app-content" class="container pb-5" style="max-width: 720px;" hidden>
+        <%- body %>
+    </main>
+
+    <div id="message-overlay" class="message-overlay" role="presentation" hidden>
+        <div id="message-box" class="message-box" data-type="danger" role="alert" aria-live="assertive">
+            <img id="message-gif" class="message-gif" src="https://media2.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif" alt="Meme buồn báo lỗi">
+            <div>
+                <h2 id="message-title" class="message-title">Có lỗi</h2>
+                <p id="message-text" class="message-text"></p>
+            </div>
+            <button id="message-close" class="btn-close message-close" type="button" aria-label="Đóng thông báo"></button>
+        </div>
+    </div>
+
+    <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="/js/auth-ui.js"></script>
+    <script>
+        const messageOverlay = document.getElementById('message-overlay');
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageTitle = document.getElementById('message-title');
+        const messageGif = document.getElementById('message-gif');
+        let messageTimer;
+        let closeCallback;
+        let previousFocus;
+
+        const messageStates = {
+            success: {
+                title: 'Thành công',
+                gif: 'https://media2.giphy.com/media/111ebonMs90YLu/giphy.gif',
+                alt: 'Meme đồng ý ăn mừng',
+            },
+            danger: {
+                title: 'Có lỗi',
+                gif: 'https://media2.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif',
+                alt: 'Meme buồn báo lỗi',
+            },
+            info: {
+                title: 'Thông tin',
+                gif: 'https://media0.giphy.com/media/WRQBXSCnEFJIuxktnw/giphy.gif',
+                alt: 'Meme bối rối suy nghĩ',
+            },
+        };
+
+        const closeMessage = () => {
+            if (messageOverlay.hidden) return;
+            messageOverlay.hidden = true;
+            clearTimeout(messageTimer);
+            const callback = closeCallback;
+            closeCallback = null;
+            previousFocus?.focus();
+            callback?.();
+        };
+
+        window.showMessage = (message, type = 'danger', onClose) => {
+            const state = messageStates[type] || messageStates.danger;
+            messageText.textContent = message;
+            messageTitle.textContent = state.title;
+            messageGif.src = state.gif;
+            messageGif.alt = state.alt;
+            messageBox.dataset.type = messageStates[type] ? type : 'danger';
+            messageOverlay.hidden = false;
+            closeCallback = onClose;
+            previousFocus = document.activeElement;
+            document.getElementById('message-close').focus();
+            clearTimeout(messageTimer);
+            messageTimer = setTimeout(closeMessage, 3000);
+        };
+
+        document.getElementById('message-close').addEventListener('click', closeMessage);
+        messageOverlay.addEventListener('click', (event) => {
+            if (event.target === messageOverlay) closeMessage();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !messageOverlay.hidden) closeMessage();
+        });
+    </script>
+</body>
+
+</html>

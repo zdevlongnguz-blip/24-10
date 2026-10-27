@@ -1,0 +1,184 @@
+<div id="loading-message" class="alert alert-info" role="status">Đang tải danh sách game...</div>
+
+<form id="filter-form" class="mb-3">
+  <input id="search" class="form-control mb-3" type="text" placeholder="Tìm kiếm game theo tên, thể loại, nền tảng...">
+  <select id="order" class="form-select mb-3">
+    <option value="asc">Sắp xếp theo tên (A-Z)</option>
+    <option value="desc">Sắp xếp theo tên (Z-A)</option>
+  </select>
+  <button id="filter-button" class="btn btn-primary" type="submit">Lọc</button>
+</form>
+
+<table id="games-table" class="table table-striped" hidden>
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Price</th>
+      <th>Platform</th>
+      <th>Category</th>
+      <th>Image</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="games-tbody">
+
+  </tbody>
+</table>
+
+<form id="games-pagination" class="d-flex justify-content-center align-items-center gap-2 flex-wrap mb-3" action="/" method="get" aria-label="Phân trang game" hidden>
+  <input id="pagination-search" type="hidden" name="search">
+  <input id="pagination-order" type="hidden" name="order">
+  <button id="previous-page" class="btn btn-outline-secondary" type="button" aria-label="Trang trước" title="Trang trước">−</button>
+  <input id="page-number" class="form-control text-center" style="width: 5rem;" type="number" name="page" min="1" required aria-label="Số trang">
+  <button id="next-page" class="btn btn-outline-secondary" type="button" aria-label="Trang sau" title="Trang sau">+</button>
+  <button class="btn btn-primary" type="submit">Go to</button>
+  <span id="page-label" class="text-secondary text-center"></span>
+</form>
+<script type="module">
+  import api from '/js/api-client.js';
+
+  const tbody = document.getElementById('games-tbody');
+  const loadingMessage = document.getElementById('loading-message');
+  const gamesTable = document.getElementById('games-table');
+  const search = document.getElementById('search');
+  const orderSelect = document.getElementById('order');
+  const filterForm = document.getElementById('filter-form');
+  const pagination = document.getElementById('games-pagination');
+  const previousPage = document.getElementById('previous-page');
+  const nextPage = document.getElementById('next-page');
+  const pageNumber = document.getElementById('page-number');
+  const paginationSearch = document.getElementById('pagination-search');
+  const paginationOrder = document.getElementById('pagination-order');
+  const pageLabel = document.getElementById('page-label');
+  let currentPage = 1;
+
+  const updatePaginationForm = (page, totalPages = Number(pageNumber.max) || 1) => {
+    pageNumber.value = String(page);
+    pageNumber.max = String(Math.max(totalPages, 1));
+    previousPage.disabled = page <= 1;
+    nextPage.disabled = page >= totalPages;
+    paginationSearch.value = search.value.trim();
+    paginationOrder.value = orderSelect.value;
+  };
+
+  const setPage = (page, replace = false) => {
+    currentPage = page;
+    updatePaginationForm(page);
+    const params = new URLSearchParams();
+    if (search.value.trim()) params.set('search', search.value.trim());
+    params.set('order', orderSelect.value);
+    params.set('page', String(page));
+    window.history[replace ? 'replaceState' : 'pushState']({}, '', `/?${params}`);
+  };
+
+  const loadFromUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    search.value = params.get('search') || '';
+    orderSelect.value = params.get('order') === 'desc' ? 'desc' : 'asc';
+    const page = Number.parseInt(params.get('page'), 10);
+    currentPage = Number.isInteger(page) && page > 0 ? page : 1;
+    updatePaginationForm(currentPage);
+  };
+
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character]);
+
+  const loadGames = async () => {
+    loadingMessage.textContent = 'Đang tải danh sách game...';
+    loadingMessage.hidden = false;
+    gamesTable.hidden = true;
+    pagination.hidden = true;
+
+    try {
+      const res = await api.get(`/api/games${window.location.search}`);
+      const { games, total, page, totalPages } = res.data;
+
+      if (page > Math.max(totalPages, 1)) {
+        setPage(Math.max(totalPages, 1), true);
+        return loadGames();
+      }
+
+      if (games.length === 0) {
+        tbody.replaceChildren();
+        loadingMessage.textContent = search.value.trim()
+          ? 'Không tìm thấy game phù hợp.'
+          : 'Danh sách game trống.';
+        return;
+      }
+
+      loadingMessage.hidden = true;
+      pageLabel.textContent = `${page}/${totalPages}`;
+      updatePaginationForm(page, totalPages);
+      pagination.hidden = false;
+      tbody.innerHTML = games.map((game) => {
+        const image = game.imageUrl && /^https?:\/\//i.test(game.imageUrl)
+          ? `<img src="${escapeHtml(game.imageUrl)}" alt="Ảnh bìa ${escapeHtml(game.title)}" style="max-width: 100px;">`
+          : 'Không có ảnh';
+
+        return `<tr>
+          <td>${escapeHtml(game.title)}</td>
+          <td>${Number(game.price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</td>
+          <td>${escapeHtml(game.platform)}</td>
+          <td>${escapeHtml(game.category)}</td>
+          <td>${image}</td>
+          <td>
+            <a href="/game/${encodeURIComponent(game.id)}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+            <a href="/game/${encodeURIComponent(game.id)}/edit" class="btn btn-sm btn-primary">Sửa</a>
+            <button class="btn btn-sm btn-danger delete-game" data-game-id="${escapeHtml(game.id)}">Xóa</button>
+          </td>
+        </tr>`;
+      }).join('');
+      gamesTable.hidden = false;
+
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      loadingMessage.hidden = true;
+      window.showMessage('Có lỗi xảy ra khi tải danh sách game.');
+    }
+  };
+
+  const deleteGame = async (id) => {
+    if(!confirm('Bạn có chắc chắn muốn xóa game này?')) return;
+    try {
+      await api.delete(`/api/games/${encodeURIComponent(id)}`);
+      window.showMessage('Xóa game thành công.', 'success');
+      await loadGames();
+    } catch (error) {
+      console.error('Error deleting game:', error);
+      window.showMessage('Có lỗi xảy ra khi xóa game.');
+    }
+  };
+
+  filterForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    setPage(1);
+    loadGames();
+  });
+
+  previousPage.addEventListener('click', () => {
+    pageNumber.value = String(Math.max(1, Number(pageNumber.value || currentPage) - 1));
+  });
+
+  nextPage.addEventListener('click', () => {
+    pageNumber.value = String(Math.min(Number(pageNumber.max), Number(pageNumber.value || currentPage) + 1));
+  });
+
+  tbody.addEventListener('click', (event) => {
+    const button = event.target.closest('.delete-game');
+    if (button) deleteGame(button.dataset.gameId);
+  });
+
+  window.addEventListener('popstate', () => {
+    loadFromUrl();
+    loadGames();
+  });
+
+  loadFromUrl();
+  if (!window.location.search) setPage(currentPage, true);
+  loadGames();
+</script>

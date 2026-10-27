@@ -1,0 +1,190 @@
+<style>
+    .chat-panel {
+        display: flex;
+        flex-direction: column;
+        height: min(68vh, 680px);
+        min-height: 360px;
+        border: 1px solid #d7dee8;
+        border-radius: 0.5rem;
+        background: #fff;
+    }
+
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    .chat-row {
+        display: flex;
+        margin-bottom: 0.85rem;
+    }
+
+    .chat-row-user {
+        justify-content: flex-end;
+    }
+
+    .chat-bubble {
+        max-width: min(85%, 38rem);
+        padding: 0.65rem 0.85rem;
+        border-radius: 0.75rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    .chat-bubble-user {
+        color: #fff;
+        background: #0d6efd;
+        border-bottom-right-radius: 0.2rem;
+    }
+
+    .chat-bubble-assistant {
+        color: #202832;
+        background: #eef2f7;
+        border-bottom-left-radius: 0.2rem;
+    }
+
+    .chat-composer {
+        padding: 0.85rem;
+        border-top: 1px solid #d7dee8;
+    }
+
+    #command {
+        resize: vertical;
+        min-height: 2.75rem;
+        max-height: 9rem;
+    }
+</style>
+
+<section class="container mt-3" aria-labelledby="chat-title">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <h1 id="chat-title" class="h4 mb-0"><%= title || 'Trợ lý AI' %></h1>
+        <button id="clear-chat" class="btn btn-sm btn-outline-secondary" type="button">Xóa hội thoại</button>
+    </div>
+    <div class="chat-panel">
+        <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <form id="chat-form" class="chat-composer">
+            <label class="visually-hidden" for="command">Tin nhắn</label>
+            <div class="d-flex align-items-end gap-2">
+                <textarea id="command" class="form-control" rows="2" maxlength="1200" placeholder="Nhập tin nhắn..." required autofocus></textarea>
+                <button id="submit-btn" class="btn btn-primary flex-shrink-0" type="submit">Gửi</button>
+            </div>
+            <p id="command_error" class="text-danger small mb-0 mt-1" aria-live="polite"></p>
+            <p id="chat-status" class="text-secondary small mb-0 mt-1" role="status" hidden>Đang trả lời...</p>
+        </form>
+    </div>
+</section>
+
+<script type="module">
+    import api from '/js/api-client.js';
+    import { getToken } from '/js/auth-token.js';
+
+    const form = document.getElementById('chat-form');
+    const commandInput = document.getElementById('command');
+    const submitButton = document.getElementById('submit-btn');
+    const commandError = document.getElementById('command_error');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatStatus = document.getElementById('chat-status');
+    const clearChatButton = document.getElementById('clear-chat');
+    const storageKey = `ai-chat-history:${getToken() || 'guest'}`;
+    const maxStoredMessages = 24;
+    const maxContextMessages = 6;
+    const maxContextMessageLength = 700;
+
+    const loadMessages = () => {
+        try {
+            const storedMessages = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (!Array.isArray(storedMessages)) return [];
+            return storedMessages
+                .filter((message) => ['user', 'assistant'].includes(message.role) && typeof message.text === 'string')
+                .slice(-maxStoredMessages);
+        } catch {
+            return [];
+        }
+    };
+
+    let messages = loadMessages();
+
+    const saveMessages = () => {
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(messages.slice(-maxStoredMessages)));
+        } catch {
+            window.showMessage('Không thể lưu lịch sử chat trên trình duyệt.', 'danger');
+        }
+    };
+
+    const renderMessages = () => {
+        chatMessages.replaceChildren();
+        if (messages.length === 0) {
+            const emptyState = document.createElement('p');
+            emptyState.className = 'text-secondary mb-0';
+            emptyState.textContent = 'Bắt đầu cuộc trò chuyện về danh sách game.';
+            chatMessages.append(emptyState);
+        }
+
+        for (const message of messages) {
+            const row = document.createElement('div');
+            row.className = `chat-row ${message.role === 'user' ? 'chat-row-user' : ''}`;
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble chat-bubble-${message.role}`;
+            bubble.textContent = message.text;
+            row.append(bubble);
+            chatMessages.append(row);
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    renderMessages();
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const command = commandInput.value.trim();
+        commandError.textContent = '';
+        if (!command) {
+            commandError.textContent = 'Vui lòng nhập yêu cầu.';
+            return;
+        }
+
+        submitButton.textContent = 'Đang xử lý...';
+        submitButton.disabled = true;
+        chatStatus.hidden = false;
+        const history = messages.slice(-maxContextMessages).map(({ role, text }) => ({
+            role,
+            text: text.slice(0, maxContextMessageLength),
+        }));
+        messages.push({ role: 'user', text: command });
+        commandInput.value = '';
+        renderMessages();
+
+        try {
+            const res = await api.post('/api/ai/command', { command, history });
+            messages.push({ role: 'assistant', text: res.data.reply || 'AI không trả về câu trả lời.' });
+            saveMessages();
+            renderMessages();
+        } catch (error) {
+            console.error('Error:', error);
+            messages.pop();
+            renderMessages();
+            window.showMessage(error.response?.data?.error || error.message, 'danger');
+        } finally {
+            chatStatus.hidden = true;
+            submitButton.textContent = 'Gửi yêu cầu';
+            submitButton.disabled = false;
+            commandInput.focus();
+        }
+    });
+
+    commandInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    clearChatButton.addEventListener('click', () => {
+        if (!confirm('Xóa toàn bộ hội thoại đã lưu trên trình duyệt?')) return;
+        messages = [];
+        localStorage.removeItem(storageKey);
+        renderMessages();
+    });
+</script>
